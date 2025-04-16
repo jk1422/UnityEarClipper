@@ -19,13 +19,35 @@ namespace EarClipperLib
 
     public class EarClipper
     {
-        public Vector2[] points2D;
-        public List<Triangle> triangles = new();
+        private Vector2[] points2D;
+        private List<Triangle> triangles = new();
 
+        #region Initialization
+
+        /// <summary>
+        /// Ensure points are ordered in a clockwise order:<br/>
+        /// <code>
+        /// 1 -- 2
+        /// |    |
+        /// 0 -- 3
+        /// </code>
+        /// </summary>
         public EarClipper(Vector3[] points)
         {
             this.points2D = ProjectVerts(points);
         }
+
+        /// <summary>
+        /// Ensure outer points are ordered clockwise, and hole points counter-clockwise.
+        /// Holes must also be arranged from left to right:
+        /// <code>
+        /// 1 -------------------- 2
+        /// |   3 --- 2  3 --- 2   |
+        /// |   |  1  |  |  2  |   |
+        /// |   0 --- 1  0 --- 1   |
+        /// 0 -------------------- 3
+        /// </code>
+        /// </summary>
         public EarClipper(Vector3[] points, List<Vector3[]> holes, out Vector3[] merged)
         {
             List<Vector3> merge = new();
@@ -99,9 +121,16 @@ namespace EarClipperLib
 
             return index;
         }
+        #endregion
 
+        #region Triangulation
+        /// <summary>
+        /// Triangulates the polygon and returns the triangle indices in a format Unity's Mesh can use.
+        /// </summary>
+        /// <param name="flipped">If true, the triangle winding order is reversed.</param>
         public int[] Triangulate(bool flipped = false)
         {
+            triangles.Clear();
             List<int> remaining = Enumerable.Range(0, points2D.Length).ToList();
 
             while (remaining.Count > 3)
@@ -147,7 +176,10 @@ namespace EarClipperLib
                 result.Add(tri.next);
             }
             var res = result.ToArray();
+
+            // Might need a better way of actually reversing the triangles instead of just reversing the array, but I havent had any problems so far
             if (flipped) return res.Reverse().ToArray();
+
             return res;
         }
 
@@ -197,14 +229,13 @@ namespace EarClipperLib
                 return s <= 0 && t <= 0 && s + t >= D;
             return s >= 0 && t >= 0 && s + t <= D;
         }
+        #endregion
 
+        #region 2D-Projecting
         private Vector2[] ProjectVerts(Vector3[] input)
         {
             Vector3 dim = GetDimensions(input);
-            float shortest = Mathf.Min(dim.x, dim.y, dim.z);
-
-            Vector3 direction = (shortest == dim.x) ? Vector3.right :
-                                (shortest == dim.y) ? Vector3.down : Vector3.forward;
+            Vector3 direction = GetShortestDirection(dim);
 
             Quaternion rot = Quaternion.FromToRotation(direction, Vector3.up);
             Matrix4x4 rotationMatrix = Matrix4x4.Rotate(rot);
@@ -218,7 +249,13 @@ namespace EarClipperLib
             }
             return result;
         }
-
+        private Vector3 GetShortestDirection(Vector3 dim)
+        {
+            float shortest = Mathf.Min(dim.x, dim.y, dim.z);
+            return (shortest == dim.x) ? Vector3.right :
+                   (shortest == dim.y) ? Vector3.down :
+                                          Vector3.forward;
+        }
         private Vector3 GetDimensions(Vector3[] points)
         {
             float minX = points[0].x, maxX = points[0].x;
@@ -237,6 +274,6 @@ namespace EarClipperLib
 
             return new Vector3(maxX - minX, maxY - minY, maxZ - minZ);
         }
+        #endregion
     }
-
 }
