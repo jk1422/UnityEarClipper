@@ -41,12 +41,7 @@ namespace EarClipperLib.Sample
         {
             // Define the vertices of a simple polygon.
             // IMPORTANT: The points must be ordered in **clockwise** order for proper triangulation.
-            Vector3[] points = new Vector3[] {
-                new Vector3(0, 0, 0),
-                new Vector3(-1f, 0, 0),
-                new Vector3(-1f, 1f, 0),
-                new Vector3(0, 1f, 0)
-            };
+            Vector3[] points = myBaseMesh.points;
 
             // Create a new instance of the EarClipper triangulator with the defined points.
             EarClipper earClipper = new(points);
